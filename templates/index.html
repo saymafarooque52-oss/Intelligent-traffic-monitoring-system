@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Intelligent Traffic Monitoring System</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom Style -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar/Navbar -->
+        <header class="navbar">
+            <div class="logo">
+                <i class="fa-solid fa-traffic-light icon-pulse"></i>
+                <h1>Antigravity Traffic <span>AI</span></h1>
+            </div>
+            <nav class="nav-links">
+                <a href="#monitor" class="active"><i class="fa-solid fa-chart-line"></i> Live Monitor</a>
+                <a href="#predictor"><i class="fa-solid fa-calculator"></i> Predictor</a>
+                <a href="#analytics"><i class="fa-solid fa-chart-pie"></i> Analytics</a>
+            </nav>
+            <div class="status-badge-container">
+                <div class="status-dot green"></div>
+                <span>Systems Nominal</span>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Section 1: KPI Dashboard -->
+            <section id="monitor" class="dashboard-section">
+                <div class="section-header">
+                    <h2>Real-Time Traffic Telemetry</h2>
+                    <p>Live streams from virtual roadside edge sensors and network layers</p>
+                </div>
+                
+                <div class="kpi-grid">
+                    <div class="kpi-card" id="card-density">
+                        <div class="kpi-header">
+                            <span>Vehicle Density</span>
+                            <i class="fa-solid fa-car-side"></i>
+                        </div>
+                        <div class="kpi-value"><span id="live-density">--</span> <small>veh/km</small></div>
+                        <div class="kpi-footer">
+                            <span id="density-status">Loading data...</span>
+                        </div>
+                    </div>
+                    <div class="kpi-card" id="card-speed">
+                        <div class="kpi-header">
+                            <span>Average Speed</span>
+                            <i class="fa-solid fa-gauge-high"></i>
+                        </div>
+                        <div class="kpi-value"><span id="live-speed">--</span> <small>km/h</small></div>
+                        <div class="kpi-footer">
+                            <span id="speed-status">Loading data...</span>
+                        </div>
+                    </div>
+                    <div class="kpi-card" id="card-flow">
+                        <div class="kpi-header">
+                            <span>Flow Rate</span>
+                            <i class="fa-solid fa-arrow-trend-up"></i>
+                        </div>
+                        <div class="kpi-value"><span id="live-flow">--</span> <small>veh/h</small></div>
+                        <div class="kpi-footer">
+                            <span id="flow-status">Loading data...</span>
+                        </div>
+                    </div>
+                    <div class="kpi-card" id="card-latency">
+                        <div class="kpi-header">
+                            <span>Network Latency</span>
+                            <i class="fa-solid fa-wifi"></i>
+                        </div>
+                        <div class="kpi-value"><span id="live-latency">--</span> <small>ms</small></div>
+                        <div class="kpi-footer">
+                            <span id="latency-status">Loading data...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Simulation Control Panel -->
+                <div class="simulation-panel glass">
+                    <div class="sim-meta">
+                        <h3><i class="fa-solid fa-microchip"></i> Active Simulation Feed</h3>
+                        <p>Simulating dynamic telemetry changes across weather, peak times, and network conditions.</p>
+                    </div>
+                    <div class="sim-controls">
+                        <div class="model-toggle">
+                            <label>Active Engine:</label>
+                            <div class="toggle-buttons">
+                                <button type="button" class="btn-toggle active" id="toggle-sim-ml" onclick="setSimModel('ml')">ML (XGBoost/RF)</button>
+                                <button type="button" class="btn-toggle" id="toggle-sim-dl" onclick="setSimModel('dl')">DL (PyTorch MLP)</button>
+                            </div>
+                        </div>
+                        <div class="feed-switch-container">
+                            <span class="switch-label">Live Sensor Feed:</span>
+                            <label class="switch">
+                                <input type="checkbox" id="sim-switch" checked>
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="monitor-detail-grid">
+                    <!-- Live Simulation Parameters Visualizer -->
+                    <div class="monitor-column glass">
+                        <h3 class="panel-title"><i class="fa-solid fa-list-check"></i> Telemetry Parameters</h3>
+                        <div class="telemetry-list">
+                            <div class="telemetry-item">
+                                <span>Weather Condition</span>
+                                <span class="badge" id="telemetry-weather">--</span>
+                            </div>
+                            <div class="telemetry-item">
+                                <span>Ambient Temperature</span>
+                                <span class="val" id="telemetry-temp">--</span>
+                            </div>
+                            <div class="telemetry-item">
+                                <span>Visibility Range</span>
+                                <span class="val" id="telemetry-visibility">--</span>
+                            </div>
+                            <div class="telemetry-item">
+                                <span>Temporal Period</span>
+                                <span class="val" id="telemetry-time">--</span>
+                            </div>
+                            <div class="telemetry-item">
+                                <span>Peak Traffic Hour</span>
+                                <span class="badge" id="telemetry-peak">--</span>
+                            </div>
+                            <div class="telemetry-item">
+                                <span>Packet Loss Ratio</span>
+                                <span class="val" id="telemetry-loss">--</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Live AI Decision Panel -->
+                    <div class="monitor-column glass decision-panel">
+                        <h3 class="panel-title"><i class="fa-solid fa-brain"></i> Edge AI Decision Engine</h3>
+                        <div class="decision-output">
+                            <div class="pulse-indicator-container">
+                                <div class="pulse-circle" id="decision-pulse"></div>
+                                <span class="decision-label" id="decision-text">MEASURING</span>
+                            </div>
+                            <p class="decision-subtext">Current classification computed using the active AI inference engine.</p>
+                        </div>
+                        <div class="probability-bars">
+                            <h4>Confidence Levels</h4>
+                            <div class="prob-row">
+                                <span class="label">Low Traffic</span>
+                                <div class="bar-container"><div class="bar green" id="sim-prob-low" style="width: 0%"></div></div>
+                                <span class="percentage" id="sim-val-low">0%</span>
+                            </div>
+                            <div class="prob-row">
+                                <span class="label">Medium Traffic</span>
+                                <div class="bar-container"><div class="bar yellow" id="sim-prob-med" style="width: 0%"></div></div>
+                                <span class="percentage" id="sim-val-med">0%</span>
+                            </div>
+                            <div class="prob-row">
+                                <span class="label">High Congestion</span>
+                                <div class="bar-container"><div class="bar red" id="sim-prob-high" style="width: 0%"></div></div>
+                                <span class="percentage" id="sim-val-high">0%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 2: Interactive Predictor Playground -->
+            <section id="predictor" class="dashboard-section">
+                <div class="section-header">
+                    <h2>Interactive AI Playground</h2>
+                    <p>Manually adjust traffic metrics and predict traffic condition severity in real-time</p>
+                </div>
+
+                <div class="playground-layout">
+                    <form id="predictor-form" class="glass form-grid">
+                        <div class="form-group col-span-2">
+                            <label><i class="fa-solid fa-server"></i> Classification Model</label>
+                            <select id="pred-model-type" class="glass-input">
+                                <option value="ml">Machine Learning (Best Classifier: Random Forest/XGBoost)</option>
+                                <option value="dl">Deep Learning (PyTorch MLP Network)</option>
+                            </select>
+                        </div>
+
+                        <!-- Numeric inputs -->
+                        <div class="form-group">
+                            <label>Vehicle Density (veh/km) <span id="val-density" class="slider-val">80</span></label>
+                            <input type="range" id="input-density" min="0" max="250" value="80" class="custom-slider">
+                        </div>
+                        <div class="form-group">
+                            <label>Average Speed (km/h) <span id="val-speed" class="slider-val">45</span></label>
+                            <input type="range" id="input-speed" min="5" max="120" value="45" class="custom-slider">
+                        </div>
+                        <div class="form-group">
+                            <label>Traffic Flow Rate (veh/h) <span id="val-flow" class="slider-val">300</span></label>
+                            <input type="range" id="input-flow" min="0" max="2500" value="300" class="custom-slider">
+                        </div>
+                        <div class="form-group">
+                            <label>Visibility Range (m) <span id="val-visibility" class="slider-val">300</span></label>
+                            <input type="range" id="input-visibility" min="10" max="500" value="300" class="custom-slider">
+                        </div>
+                        <div class="form-group">
+                            <label>Temperature (°C) <span id="val-temp" class="slider-val">25</span></label>
+                            <input type="range" id="input-temp" min="-10" max="50" value="25" class="custom-slider">
+                        </div>
+                        <div class="form-group">
+                            <label>Network Latency (ms) <span id="val-latency" class="slider-val">40</span></label>
+                            <input type="range" id="input-latency" min="1" max="200" value="40" class="custom-slider">
+                        </div>
+                        <div class="form-group">
+                            <label>Packet Loss (%) <span id="val-packet_loss" class="slider-val">0.1</span></label>
+                            <input type="range" id="input-packet_loss" min="0" max="10" step="0.1" value="0.1" class="custom-slider">
+                        </div>
+                        <div class="form-group">
+                            <label>Hour of Day (0-23) <span id="val-hour" class="slider-val">12</span></label>
+                            <input type="range" id="input-hour" min="0" max="23" value="12" class="custom-slider">
+                        </div>
+
+                        <!-- Categorical & Binary -->
+                        <div class="form-group">
+                            <label>Weather Condition</label>
+                            <select id="input-weather" class="glass-input">
+                                <option value="Clear">Clear</option>
+                                <option value="Rainy">Rainy</option>
+                                <option value="Foggy">Foggy</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Day of the Week</label>
+                            <select id="input-day" class="glass-input">
+                                <option value="Mon">Monday</option>
+                                <option value="Tue">Tuesday</option>
+                                <option value="Wed">Wednesday</option>
+                                <option value="Thu">Thursday</option>
+                                <option value="Fri">Friday</option>
+                                <option value="Sat">Saturday</option>
+                                <option value="Sun">Sunday</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Signal Strength (dBm)</label>
+                            <input type="number" id="input-signal" value="80" min="20" max="100" class="glass-input">
+                        </div>
+                        <div class="form-group">
+                            <label>Is Peak Hour</label>
+                            <div class="checkbox-container">
+                                <input type="checkbox" id="input-peak" class="hidden-checkbox">
+                                <label for="input-peak" class="styled-checkbox"></label>
+                                <span>Active Peak Period</span>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-primary col-span-2"><i class="fa-solid fa-microchip"></i> Execute Real-Time Inference</button>
+                    </form>
+
+                    <!-- Interactive Output Display -->
+                    <div class="playground-output glass">
+                        <h3>Inference Analysis Output</h3>
+                        
+                        <div id="playground-result-empty" class="output-placeholder">
+                            <i class="fa-solid fa-gears"></i>
+                            <p>Adjust inputs and click "Execute Inference" to generate traffic classification prediction.</p>
+                        </div>
+
+                        <div id="playground-result-active" class="output-results hidden">
+                            <div class="result-box">
+                                <span class="result-title">Predicted Traffic Class</span>
+                                <h2 id="play-prediction">Medium</h2>
+                                <span class="result-meta">Confidence Score: <strong id="play-confidence">0.00%</strong></span>
+                            </div>
+
+                            <div class="probability-bars">
+                                <h4>Distributed Class Confidence</h4>
+                                <div class="prob-row">
+                                    <span class="label">Low Traffic</span>
+                                    <div class="bar-container"><div class="bar green" id="play-prob-low" style="width: 0%"></div></div>
+                                    <span class="percentage" id="play-val-low">0%</span>
+                                </div>
+                                <div class="prob-row">
+                                    <span class="label">Medium Traffic</span>
+                                    <div class="bar-container"><div class="bar yellow" id="play-prob-med" style="width: 0%"></div></div>
+                                    <span class="percentage" id="play-val-med">0%</span>
+                                </div>
+                                <div class="prob-row">
+                                    <span class="label">High Congestion</span>
+                                    <div class="bar-container"><div class="bar red" id="play-prob-high" style="width: 0%"></div></div>
+                                    <span class="percentage" id="play-val-high">0%</span>
+                                </div>
+                            </div>
+
+                            <div class="metadata-footer">
+                                <span>Engine used: <strong id="play-engine">--</strong></span>
+                                <span>Latency: <strong id="play-latency-ms">~1.4 ms</strong></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 3: Exploratory Data Analysis & Analytics -->
+            <section id="analytics" class="dashboard-section">
+                <div class="section-header">
+                    <h2>Exploratory Data Analysis & Analytics</h2>
+                    <p>Model performance graphs, feature correlations, and dataset summaries</p>
+                </div>
+
+                <div class="analytics-tabs-container">
+                    <div class="tabs">
+                        <button class="tab-link active" onclick="openTab(event, 'tab-correlations')">Feature Correlation</button>
+                        <button class="tab-link" onclick="openTab(event, 'tab-distributions')">Traffic Distributions</button>
+                        <button class="tab-link" onclick="openTab(event, 'tab-dl-history')">PyTorch DL Performance</button>
+                    </div>
+
+                    <div id="tab-correlations" class="tab-content active">
+                        <div class="analytics-grid">
+                            <div class="chart-container glass">
+                                <img id="img-corr" src="/plots/correlation_matrix.png" alt="Correlation Matrix" onerror="this.src='https://placehold.co/600x480/1a1a24/ffffff?text=Run+eda.py+to+generate+plots'">
+                            </div>
+                            <div class="chart-desc glass">
+                                <h3><i class="fa-solid fa-circle-info"></i> Feature Correlation Map</h3>
+                                <p>This Pearson correlation matrix tracks linear relationships between all numerical features in the dataset.</p>
+                                <ul>
+                                    <li><strong>Vehicle Density & Speed:</strong> Strong negative correlation. As density increases, average vehicle speed decreases, pointing to congestion.</li>
+                                    <li><strong>Flow Rate:</strong> Heavily correlated with vehicle density, since flow is density multiplied by speed.</li>
+                                    <li><strong>Network Metrics:</strong> Show correlation between latency and packet loss, representing edge processing network quality.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="tab-distributions" class="tab-content">
+                        <div class="analytics-grid">
+                            <div class="chart-container glass">
+                                <img id="img-dist" src="/plots/traffic_condition_dist.png" alt="Class Distribution" onerror="this.src='https://placehold.co/600x480/1a1a24/ffffff?text=Run+eda.py+to+generate+plots'">
+                            </div>
+                            <div class="chart-desc glass">
+                                <h3><i class="fa-solid fa-chart-bar"></i> Traffic Condition Distribution</h3>
+                                <p>Demonstrates target variable balance across 4,000 recorded samples:</p>
+                                <ul>
+                                    <li><strong>Medium:</strong> The most prevalent state in typical city streets.</li>
+                                    <li><strong>Low & High:</strong> Represents off-peak open highways and peak congestion periods, respectively.</li>
+                                    <li>The balanced distribution ensures classifier accuracy is not biased towards a single majority class.</li>
+                                </ul>
+                            </div>
+                            <div class="chart-container glass">
+                                <img id="img-scatter" src="/plots/speed_vs_density.png" alt="Speed vs Density" onerror="this.src='https://placehold.co/600x480/1a1a24/ffffff?text=Run+eda.py+to+generate+plots'">
+                            </div>
+                            <div class="chart-desc glass">
+                                <h3><i class="fa-solid fa-diagram-project"></i> Speed vs. Vehicle Density</h3>
+                                <p>Visualizing the separation boundaries between Low, Medium, and High classes:</p>
+                                <ul>
+                                    <li><strong>Low traffic</strong> forms in the top-left region (high average speed, low density).</li>
+                                    <li><strong>High congestion</strong> is clustered in the bottom-right region (high density, low speed).</li>
+                                    <li><strong>Medium traffic</strong> populates the transition boundary. A non-linear machine learning algorithm is required to separate these overlapping domains accurately.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="tab-dl-history" class="tab-content">
+                        <div class="analytics-grid">
+                            <div class="chart-container glass">
+                                <img id="img-dl" src="/plots/dl_training_history.png" alt="PyTorch DL training history" onerror="this.src='https://placehold.co/600x480/1a1a24/ffffff?text=Run+train_dl.py+to+generate+plots'">
+                            </div>
+                            <div class="chart-desc glass">
+                                <h3><i class="fa-solid fa-brain"></i> Neural Network Learning Curve</h3>
+                                <p>PyTorch MLP performance over epochs:</p>
+                                <ul>
+                                    <li><strong>Loss curves:</strong> Training and Validation losses decay smoothly. Overfitting is minimized using standard regularizations: Batch Normalization, Dropout (0.2), and Weight Decay (L2 regularization).</li>
+                                    <li><strong>Accuracy curves:</strong> Illustrates validation accuracy converging steadily.</li>
+                                    <li>Learning rate scheduler automatically decays learning rate upon plateauing, optimizing validation performance.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+        
+        <footer class="app-footer">
+            <p>&copy; 2026 Intelligent Traffic AI Monitoring. Built using Python, Scikit-Learn, PyTorch, and Flask.</p>
+        </footer>
+    </div>
+
+    <!-- Page Logic scripts -->
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
