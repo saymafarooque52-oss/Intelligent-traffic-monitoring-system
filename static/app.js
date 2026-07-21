@@ -107,6 +107,27 @@ function setSimModel(modelType) {
     fetchSimulationTick();
 }
 
+// Switch active feed source between simulation and image telemetry
+async function setFeedSource(sourceType) {
+    try {
+        const response = await fetch('/api/toggle-feed-source', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ source: sourceType })
+        });
+        const resData = await response.json();
+        if (resData.status === 'success') {
+            document.getElementById('toggle-feed-sim').classList.toggle('active', sourceType === 'simulation');
+            document.getElementById('toggle-feed-img').classList.toggle('active', sourceType === 'image');
+            
+            // Trigger tick immediately to sync dashboard values
+            fetchSimulationTick();
+        }
+    } catch (err) {
+        console.error("Error toggling feed source:", err);
+    }
+}
+
 // Perform a single simulation step
 async function fetchSimulationTick() {
     try {
@@ -130,6 +151,30 @@ async function fetchSimulationTick() {
         document.getElementById('telemetry-peak').textContent = data.peak_hour ? 'YES' : 'NO';
         document.getElementById('telemetry-peak').className = `badge ${data.peak_hour ? 'rainy' : 'clear'}`;
         document.getElementById('telemetry-loss').textContent = `${data.packet_loss} %`;
+
+        // Update Camera Feed panel based on active source
+        const feedEmpty = document.getElementById('camera-feed-empty');
+        const feedActive = document.getElementById('camera-feed-active');
+        
+        if (data.feed_source === 'image') {
+            document.getElementById('toggle-feed-sim').classList.remove('active');
+            document.getElementById('toggle-feed-img').classList.add('active');
+            
+            if (data.annotated_img_url) {
+                document.getElementById('live-camera-img').src = data.annotated_img_url + '?t=' + new Date().getTime();
+                document.getElementById('camera-vehicle-count').textContent = data.vehicle_count || 0;
+                if (feedEmpty) feedEmpty.style.display = 'none';
+                if (feedActive) feedActive.style.display = 'block';
+            } else {
+                if (feedEmpty) feedEmpty.style.display = 'flex';
+                if (feedActive) feedActive.style.display = 'none';
+            }
+        } else {
+            document.getElementById('toggle-feed-sim').classList.add('active');
+            document.getElementById('toggle-feed-img').classList.remove('active');
+            if (feedEmpty) feedEmpty.style.display = 'flex';
+            if (feedActive) feedActive.style.display = 'none';
+        }
 
         // Request prediction using the simulation data
         requestSimulationPrediction(data);
@@ -454,6 +499,17 @@ async function handleRunImageDetection() {
         formData.append('image', selectedFile);
     }
     
+    // Append the other form values so they synchronize with the active telemetry state
+    formData.append('weather', document.getElementById('input-weather').value);
+    formData.append('temp', document.getElementById('input-temp').value);
+    formData.append('visibility', document.getElementById('input-visibility').value);
+    formData.append('signal', document.getElementById('input-signal').value);
+    formData.append('latency', document.getElementById('input-latency').value);
+    formData.append('packet_loss', document.getElementById('input-packet_loss').value);
+    formData.append('hour', document.getElementById('input-hour').value);
+    formData.append('day', document.getElementById('input-day').value);
+    formData.append('peak_hour', document.getElementById('input-peak').checked ? 1 : 0);
+    
     try {
         const response = await fetch('/api/detect-image', {
             method: 'POST',
@@ -496,6 +552,9 @@ async function handleRunImageDetection() {
             flowInput.value = Math.round(data.flow);
             document.getElementById('val-flow').textContent = Math.round(data.flow);
         }
+        
+        // Automatically switch feed source to Camera Feed
+        await setFeedSource('image');
         
         // Auto-run inference by triggering form submit
         const form = document.getElementById('predictor-form');

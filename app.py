@@ -7,6 +7,25 @@ from detection import detect_vehicles
 
 app = Flask(__name__)
 
+# Global variables to handle real-time feed source
+active_feed_source = 'simulation'
+active_image_telemetry = {
+    'density': 40,
+    'speed': 75.0,
+    'flow': 450.0,
+    'vehicle_count': 0,
+    'annotated_img_url': '',
+    'weather': 'Clear',
+    'temp': 25.0,
+    'visibility': 500.0,
+    'signal': 80.0,
+    'latency': 40.0,
+    'packet_loss': 0.1,
+    'hour': 12,
+    'day': 'Mon',
+    'peak_hour': 0
+}
+
 
 def load_ml_pipeline():
     path = os.path.join('models', 'ml_model.pkl')
@@ -55,6 +74,7 @@ def get_presets():
 
 @app.route('/api/detect-image', methods=['POST'])
 def detect_image():
+    global active_image_telemetry
     try:
         preset_filename = request.form.get('preset_filename')
         
@@ -76,7 +96,6 @@ def detect_image():
             upload_dir = os.path.join('static', 'uploads')
             os.makedirs(upload_dir, exist_ok=True)
             
-            # Use a secure filename
             clean_filename = "".join(c for c in file.filename if c.isalnum() or c in '._-')
             input_path = os.path.join(upload_dir, f"uploaded_{clean_filename}")
             file.save(input_path)
@@ -87,6 +106,24 @@ def detect_image():
         results = detect_vehicles(input_path, output_path)
         results['annotated_img_url'] = f"/static/uploads/{output_filename}"
         
+        # Save to global telemetry state
+        active_image_telemetry['density'] = results['density']
+        active_image_telemetry['speed'] = results['speed']
+        active_image_telemetry['flow'] = results['flow']
+        active_image_telemetry['vehicle_count'] = results['vehicle_count']
+        active_image_telemetry['annotated_img_url'] = results['annotated_img_url']
+        
+        # Extract additional form fields if sent by client
+        active_image_telemetry['weather'] = request.form.get('weather', 'Clear')
+        active_image_telemetry['temp'] = float(request.form.get('temp', 25.0))
+        active_image_telemetry['visibility'] = float(request.form.get('visibility', 300.0))
+        active_image_telemetry['signal'] = float(request.form.get('signal', 80.0))
+        active_image_telemetry['latency'] = float(request.form.get('latency', 40.0))
+        active_image_telemetry['packet_loss'] = float(request.form.get('packet_loss', 0.1))
+        active_image_telemetry['hour'] = int(request.form.get('hour', 12))
+        active_image_telemetry['day'] = request.form.get('day', 'Mon')
+        active_image_telemetry['peak_hour'] = int(request.form.get('peak_hour', 0))
+        
         return jsonify(results)
         
     except Exception as e:
@@ -94,13 +131,22 @@ def detect_image():
 
 @app.route('/api/simulation-data')
 def get_simulation_data():
-   
+    global active_feed_source, active_image_telemetry
+    
+    if active_feed_source == 'image':
+        # Add slight jitter to network telemetry to make it feel alive
+        data = active_image_telemetry.copy()
+        data['signal'] = round(max(20.0, min(100.0, data['signal'] + np.random.uniform(-1, 1))), 1)
+        data['latency'] = round(max(1.0, min(200.0, data['latency'] + np.random.uniform(-4, 4))), 1)
+        data['packet_loss'] = round(max(0.0, min(10.0, data['packet_loss'] + np.random.uniform(-0.05, 0.05))), 2)
+        data['feed_source'] = 'image'
+        return jsonify(data)
+        
     weather = np.random.choice(['Clear', 'Rainy', 'Foggy'], p=[0.7, 0.2, 0.1])
     day = np.random.choice(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'])
     hour = np.random.randint(0, 24)
     is_peak = 1 if hour in [8, 9, 17, 18] else 0
     
-  
     if is_peak:
         density = np.random.randint(140, 200)
         speed = np.random.uniform(15.0, 35.0)
@@ -108,11 +154,9 @@ def get_simulation_data():
         density = np.random.randint(10, 110)
         speed = np.random.uniform(40.0, 95.0)
         
-
     flow = density * speed * 0.15 + np.random.uniform(-20, 20)
     flow = max(10.0, flow)
     
-  
     signal = np.random.uniform(40, 98)
     latency = np.random.uniform(10, 180)
     packet_loss = np.random.uniform(0.0, 4.5)
@@ -129,8 +173,22 @@ def get_simulation_data():
         'packet_loss': round(packet_loss, 2),
         'hour': int(hour),
         'day': day,
-        'peak_hour': is_peak
+        'peak_hour': is_peak,
+        'feed_source': 'simulation'
     })
+
+@app.route('/api/toggle-feed-source', methods=['POST'])
+def toggle_feed_source():
+    global active_feed_source
+    try:
+        data = request.get_json()
+        source = data.get('source')
+        if source in ['simulation', 'image']:
+            active_feed_source = source
+            return jsonify({'status': 'success', 'active_source': active_feed_source})
+        return jsonify({'error': 'Invalid feed source.'}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/predict', methods=['POST'])
 def predict():

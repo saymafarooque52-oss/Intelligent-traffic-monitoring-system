@@ -92,14 +92,21 @@
                     </div>
                     <div class="sim-controls">
                         <div class="model-toggle">
+                            <label>Feed Source:</label>
+                            <div class="toggle-buttons">
+                                <button type="button" class="btn-toggle active" id="toggle-feed-sim" onclick="setFeedSource('simulation')">Simulation</button>
+                                <button type="button" class="btn-toggle" id="toggle-feed-img" onclick="setFeedSource('image')">Camera Feed</button>
+                            </div>
+                        </div>
+                        <div class="model-toggle">
                             <label>Active Engine:</label>
                             <div class="toggle-buttons">
-                                <button type="button" class="btn-toggle active" id="toggle-sim-ml" onclick="setSimModel('ml')">ML (XGBoost/RF)</button>
-                                <button type="button" class="btn-toggle" id="toggle-sim-dl" onclick="setSimModel('dl')">DL (PyTorch MLP)</button>
+                                <button type="button" class="btn-toggle active" id="toggle-sim-ml" onclick="setSimModel('ml')">ML Engine</button>
+                                <button type="button" class="btn-toggle" id="toggle-sim-dl" onclick="setSimModel('dl')">DL Engine</button>
                             </div>
                         </div>
                         <div class="feed-switch-container">
-                            <span class="switch-label">Live Sensor Feed:</span>
+                            <span class="switch-label">Live Tick:</span>
                             <label class="switch">
                                 <input type="checkbox" id="sim-switch" checked>
                                 <span class="slider round"></span>
@@ -109,6 +116,25 @@
                 </div>
 
                 <div class="monitor-detail-grid">
+                    <!-- Live Camera Feed Column -->
+                    <div class="monitor-column glass" id="camera-feed-panel">
+                        <h3 class="panel-title"><i class="fa-solid fa-camera"></i> Live Edge Camera</h3>
+                        <div class="camera-feed-container">
+                            <div id="camera-feed-empty" class="camera-feed-placeholder">
+                                <i class="fa-solid fa-video-slash"></i>
+                                <p>No Active Camera Feed</p>
+                                <small style="display: block; margin-top: 5px; opacity: 0.7; font-size: 0.75rem;">Switch Feed Source to "Camera Feed" or analyze an image in the Predictor tab to start monitoring.</small>
+                            </div>
+                            <div id="camera-feed-active" style="display: none; width: 100%;">
+                                <img id="live-camera-img" src="" alt="Live Camera Feed" style="width: 100%; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); margin-top: 5px; display: block; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
+                                <div class="camera-meta" style="margin-top: 10px; font-size: 0.85rem; color: var(--text-secondary); display: flex; justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 8px;">
+                                    <span>Status: <span id="camera-status" style="color: var(--color-success); font-weight: 500;">ACTIVE INFERENCE</span></span>
+                                    <span>Count: <span id="camera-vehicle-count" style="font-weight: bold; color: var(--text-primary);">0</span> vehicles</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Live Simulation Parameters Visualizer -->
                     <div class="monitor-column glass">
                         <h3 class="panel-title"><i class="fa-solid fa-list-check"></i> Telemetry Parameters</h3>

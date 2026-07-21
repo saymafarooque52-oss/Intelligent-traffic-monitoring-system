@@ -2,141 +2,82 @@ import os
 import cv2
 import numpy as np
 
-# Directory for preset images
-PRESETS_DIR = 'images'
-STATIC_DIR = os.path.join('static', 'uploads')
-BACKGROUND_PATH = os.path.join('static', 'background_cache.jpg')
+# Path to the MobileNet SSD Caffe model files
+PROTOTXT_PATH = os.path.join('models', 'MobileNetSSD_deploy.prototxt')
+MODEL_PATH = os.path.join('models', 'MobileNetSSD_deploy.caffemodel')
 
-def get_presets_background():
-    """Compute and cache the median background for preset images to enable subtraction."""
-    if os.path.exists(BACKGROUND_PATH):
-        bg = cv2.imread(BACKGROUND_PATH)
-        if bg is not None:
-            return bg
-            
-    if not os.path.exists(PRESETS_DIR):
-        return None
-        
-    preset_files = sorted([f for f in os.listdir(PRESETS_DIR) if f.endswith('.jpg')])
-    if len(preset_files) < 3:
-        return None
-        
-    frames = []
-    for f in preset_files:
-        path = os.path.join(PRESETS_DIR, f)
-        img = cv2.imread(path)
-        if img is not None:
-            frames.append(img)
-            
-    if not frames:
-        return None
-        
-    # Temporal median filter
-    frames_arr = np.stack(frames, axis=0)
-    median_frame = np.median(frames_arr, axis=0).astype(np.uint8)
-    
-    os.makedirs(os.path.dirname(BACKGROUND_PATH), exist_ok=True)
-    cv2.imwrite(BACKGROUND_PATH, median_frame)
-    return median_frame
+# MobileNet SSD object classes
+CLASSES = ["background", "aeroplane", "bicycle", "bird", "boat",
+           "bottle", "bus", "car", "cat", "chair", "cow", "diningtable",
+           "dog", "horse", "motorbike", "person", "pottedplant", "sheep",
+           "sofa", "train", "tvmonitor"]
 
-def detect_preset_image(image_path, output_annotated_path):
-    """Detect moving vehicles using temporal background subtraction (highly accurate for presets)."""
-    img = cv2.imread(image_path)
-    if img is None:
-        raise ValueError(f"Could not read image: {image_path}")
-        
-    bg = get_presets_background()
-    if bg is None or bg.shape != img.shape:
-        # Fallback to single image detection if background template cannot be computed
-        return detect_single_image(image_path, output_annotated_path)
-        
-    # Subtract background
-    diff = cv2.absdiff(img, bg)
-    gray_diff = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
-    
-    # Threshold and morph
-    _, thresh = cv2.threshold(gray_diff, 25, 255, cv2.THRESH_BINARY)
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
-    cleaned = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
-    cleaned = cv2.morphologyEx(cleaned, cv2.MORPH_OPEN, kernel)
-    
-    contours, _ = cv2.findContours(cleaned, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    
-    vehicle_count = 0
-    annotated = img.copy()
-    
-    for contour in contours:
-        x, y, w, h = cv2.boundingRect(contour)
-        # Filter contours by typical car sizes in the scene
-        if w > 20 and h > 20 and w < 200 and h < 200:
-            vehicle_count += 1
-            cv2.rectangle(annotated, (x, y), (x+w, y+h), (46, 204, 113), 2)
-            cv2.putText(annotated, f"Vehicle {vehicle_count}", (x, y-6), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (46, 204, 113), 1)
-            
-    os.makedirs(os.path.dirname(output_annotated_path), exist_ok=True)
-    cv2.imwrite(output_annotated_path, annotated)
-    
-    return vehicle_count
-
-def detect_single_image(image_path, output_annotated_path):
-    """Detect vehicles in a single custom image using edge/contour analysis (fallback/custom upload)."""
-    img = cv2.imread(image_path)
-    if img is None:
-        raise ValueError(f"Could not read image: {image_path}")
-        
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-    
-    # Adaptive thresholding or Canny edges
-    edges = cv2.Canny(blurred, 50, 150)
-    
-    # Dilate edges to merge car features together
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (9, 9))
-    dilated = cv2.dilate(edges, kernel, iterations=1)
-    
-    contours, _ = cv2.findContours(dilated, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    
-    vehicle_count = 0
-    annotated = img.copy()
-    
-    # Limit search to the road section (usually bottom 70% of the image)
-    height, width, _ = img.shape
-    road_min_y = int(height * 0.25)
-    
-    for contour in contours:
-        x, y, w, h = cv2.boundingRect(contour)
-        # Check if the blob is within typical vehicle aspect ratio and area, and on the road
-        if y > road_min_y:
-            if 22 < w < 220 and 20 < h < 200 and 0.4 < w/h < 2.5:
-                vehicle_count += 1
-                cv2.rectangle(annotated, (x, y), (x+w, y+h), (46, 204, 113), 2)
-                cv2.putText(annotated, f"Vehicle {vehicle_count}", (x, y-6), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (46, 204, 113), 1)
-                
-    os.makedirs(os.path.dirname(output_annotated_path), exist_ok=True)
-    cv2.imwrite(output_annotated_path, annotated)
-    
-    return vehicle_count
+# Classes representing vehicles we want to detect
+VEHICLE_CLASSES = {"car", "bus", "motorbike"}
 
 def detect_vehicles(image_path, output_annotated_path):
     """
-    Main detection entry point. Determines whether to use preset-median subtraction or single-image contours.
+    Detect vehicles in an image using MobileNet SSD, annotate it, 
+    and estimate traffic metrics (density, speed, flow).
     """
-    # Check if the file is one of the presets
-    filename = os.path.basename(image_path)
-    is_preset = False
-    if os.path.exists(os.path.join(PRESETS_DIR, filename)):
-        is_preset = True
+    if not os.path.exists(PROTOTXT_PATH) or not os.path.exists(MODEL_PATH):
+        raise FileNotFoundError("MobileNet SSD model files not found in models/ directory.")
+
+    img = cv2.imread(image_path)
+    if img is None:
+        raise ValueError(f"Could not read image from path: {image_path}")
         
-    if is_preset:
-        vehicle_count = detect_preset_image(image_path, output_annotated_path)
-    else:
-        vehicle_count = detect_single_image(image_path, output_annotated_path)
+    h, w = img.shape[:2]
+    
+    # Load model
+    net = cv2.dnn.readNetFromCaffe(PROTOTXT_PATH, MODEL_PATH)
+    
+    # Preprocess image: resize to 300x300, scale pixels, subtract mean values
+    blob = cv2.dnn.blobFromImage(cv2.resize(img, (300, 300)), 0.007843, (300, 300), 127.5)
+    net.setInput(blob)
+    detections = net.forward()
+    
+    vehicle_count = 0
+    annotated = img.copy()
+    
+    # Loop over the detections
+    for i in range(detections.shape[2]):
+        confidence = detections[0, 0, i, 2]
         
+        # Filter detections by confidence threshold (e.g. > 0.22)
+        if confidence > 0.22:
+            class_id = int(detections[0, 0, i, 1])
+            class_name = CLASSES[class_id]
+            
+            # Check if detected class is a vehicle
+            if class_name in VEHICLE_CLASSES:
+                vehicle_count += 1
+                
+                # Compute bounding box coordinates
+                box = detections[0, 0, i, 3:7] * np.array([w, h, w, h])
+                (startX, startY, endX, endY) = box.astype("int")
+                
+                # Clip coordinates to image boundary
+                startX = max(0, startX)
+                startY = max(0, startY)
+                endX = min(w - 1, endX)
+                endY = min(h - 1, endY)
+                
+                # Draw box and class name with confidence percentage
+                cv2.rectangle(annotated, (startX, startY), (endX, endY), (46, 204, 113), 2)
+                label = f"{class_name.capitalize()}: {confidence * 100:.0f}%"
+                cv2.putText(annotated, label, (startX, startY - 8), 
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.45, (46, 204, 113), 1)
+                
+    # Save the annotated output image
+    os.makedirs(os.path.dirname(output_annotated_path), exist_ok=True)
+    cv2.imwrite(output_annotated_path, annotated)
+    
     # Estimate metrics matching the training distribution:
     # Density: ranges from 10 to 200 in the dataset
-    density = int(min(200, max(10, vehicle_count * 14 + np.random.randint(-4, 4))))
+    density = int(min(200, max(10, vehicle_count * 15 + np.random.randint(-4, 4))))
     
-    # Speed: ranges from 15 to 95, inversely proportional to density
+    # Speed: ranges from 15 to 95 km/h, inversely related to density
     speed = max(15.0, min(95.0, 92.0 - 0.42 * density + np.random.uniform(-4, 4)))
     
     # Flow = density * speed * constant
@@ -150,9 +91,14 @@ def detect_vehicles(image_path, output_annotated_path):
     }
 
 if __name__ == '__main__':
-    # Test background computation
-    bg = get_presets_background()
-    if bg is not None:
-        print("Median background successfully cached.")
+    # Test on a preset image
+    test_img = os.path.join('images', 'image_9976812364.jpg')
+    test_out = os.path.join('static', 'test_out.jpg')
+    if os.path.exists(test_img):
+        try:
+            results = detect_vehicles(test_img, test_out)
+            print(f"Success! Detected: {results}")
+        except Exception as e:
+            print(f"Error testing: {e}")
     else:
-        print("Failed to compute background cache.")
+        print("Test image not found.")
