@@ -1,0 +1,21 @@
+# Virtual Environment
+venv/
+.venv/
+env/
+
+# Python Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+
+# Project Runtime / Temp Files
+static/uploads/*
+!static/uploads/.gitkeep
+static/annotated_*
+static/background*
+static/test_out.jpg

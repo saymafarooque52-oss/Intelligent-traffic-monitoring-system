@@ -1,13 +1,18 @@
 // Active simulation settings
 let simModel = 'ml'; // Default simulation model
 let simInterval = null;
+let selectedPreset = null;
+let selectedFile = null;
 
 // Initialize events when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Set up form sliders to update their label indicators dynamically
     setupSliders();
 
-    // 2. Set up form submit handler for custom inference
+    // 2. Set up CV image detection triggers
+    setupImageDetection();
+
+    // 3. Set up form submit handler for custom inference
     const predictorForm = document.getElementById('predictor-form');
     if (predictorForm) {
         predictorForm.addEventListener('submit', handleInferenceSubmit);
@@ -319,5 +324,190 @@ async function handleInferenceSubmit(e) {
 
     } catch (err) {
         alert("Inference Error: " + err.message);
+    }
+}
+
+// Set up image detection UI elements, tabs, carousel, uploads, and button actions
+function setupImageDetection() {
+    const tabManual = document.getElementById('tab-btn-manual');
+    const tabImage = document.getElementById('tab-btn-image');
+    const manualGroup = document.getElementById('manual-sliders-group');
+    const imageGroup = document.getElementById('image-input-group');
+
+    if (tabManual && tabImage && manualGroup && imageGroup) {
+        tabManual.addEventListener('click', () => {
+            tabManual.classList.add('active');
+            tabImage.classList.remove('active');
+            manualGroup.classList.remove('hidden-group');
+            imageGroup.classList.add('hidden-group');
+        });
+
+        tabImage.addEventListener('click', () => {
+            tabImage.classList.add('active');
+            tabManual.classList.remove('active');
+            manualGroup.classList.add('hidden-group');
+            imageGroup.classList.remove('hidden-group');
+            loadPresets();
+        });
+    }
+
+    const btnSelectFile = document.getElementById('btn-select-file');
+    const fileInput = document.getElementById('image-file-input');
+    const fileNameSpan = document.getElementById('selected-file-name');
+
+    if (btnSelectFile && fileInput) {
+        btnSelectFile.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                selectedFile = e.target.files[0];
+                fileNameSpan.textContent = selectedFile.name;
+                
+                selectedPreset = null;
+                document.querySelectorAll('.preset-card').forEach(c => c.classList.remove('active'));
+            } else {
+                selectedFile = null;
+                fileNameSpan.textContent = "No file selected";
+            }
+        });
+    }
+
+    const btnRunDetection = document.getElementById('btn-run-detection');
+    if (btnRunDetection) {
+        btnRunDetection.addEventListener('click', handleRunImageDetection);
+    }
+}
+
+// Load presets list from backend and render inside the carousel
+async function loadPresets() {
+    const carousel = document.getElementById('preset-carousel');
+    if (!carousel) return;
+    
+    if (carousel.querySelector('.preset-card')) return;
+    
+    try {
+        const response = await fetch('/api/presets');
+        if (!response.ok) throw new Error("Failed to load presets");
+        
+        const files = await response.json();
+        carousel.innerHTML = '';
+        
+        if (files.length === 0) {
+            carousel.innerHTML = '<div class="no-presets">No preset images found.</div>';
+            return;
+        }
+        
+        files.forEach((file, index) => {
+            const card = document.createElement('div');
+            card.className = 'preset-card';
+            card.dataset.filename = file;
+            
+            const img = document.createElement('img');
+            img.src = `/images/${file}`;
+            img.alt = `Preset ${index + 1}`;
+            
+            const span = document.createElement('span');
+            span.textContent = `Cam ${index + 1}`;
+            
+            card.appendChild(img);
+            card.appendChild(span);
+            
+            card.addEventListener('click', () => {
+                document.querySelectorAll('.preset-card').forEach(c => c.classList.remove('active'));
+                card.classList.add('active');
+                selectedPreset = file;
+                
+                selectedFile = null;
+                const fileInput = document.getElementById('image-file-input');
+                if (fileInput) fileInput.value = '';
+                const fileNameSpan = document.getElementById('selected-file-name');
+                if (fileNameSpan) fileNameSpan.textContent = 'No file selected';
+            });
+            
+            carousel.appendChild(card);
+        });
+        
+    } catch (err) {
+        console.error("Presets loading error:", err);
+        carousel.innerHTML = '<div class="no-presets">Error loading preset images.</div>';
+    }
+}
+
+// Send selected/uploaded image to backend and load estimated values into form
+async function handleRunImageDetection() {
+    if (!selectedPreset && !selectedFile) {
+        alert("Please select a camera preset or upload a custom image first.");
+        return;
+    }
+    
+    const btn = document.getElementById('btn-run-detection');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing Image...';
+    
+    const formData = new FormData();
+    if (selectedPreset) {
+        formData.append('preset_filename', selectedPreset);
+    } else if (selectedFile) {
+        formData.append('image', selectedFile);
+    }
+    
+    try {
+        const response = await fetch('/api/detect-image', {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.error || "Image analysis failed.");
+        }
+        
+        const data = await response.json();
+        
+        const previewContainer = document.getElementById('detection-preview-container');
+        const previewImg = document.getElementById('detection-preview-img');
+        
+        if (previewContainer && previewImg) {
+            previewImg.src = data.annotated_img_url + '?t=' + new Date().getTime();
+            previewContainer.classList.remove('hidden');
+        }
+        
+        document.getElementById('det-vehicles').textContent = data.vehicle_count;
+        document.getElementById('det-density').innerHTML = `${data.density} <small>veh/km</small>`;
+        document.getElementById('det-speed').innerHTML = `${data.speed} <small>km/h</small>`;
+        document.getElementById('det-flow').innerHTML = `${data.flow} <small>veh/h</small>`;
+        
+        const densityInput = document.getElementById('input-density');
+        const speedInput = document.getElementById('input-speed');
+        const flowInput = document.getElementById('input-flow');
+        
+        if (densityInput) {
+            densityInput.value = data.density;
+            document.getElementById('val-density').textContent = data.density;
+        }
+        if (speedInput) {
+            speedInput.value = Math.round(data.speed);
+            document.getElementById('val-speed').textContent = Math.round(data.speed);
+        }
+        if (flowInput) {
+            flowInput.value = Math.round(data.flow);
+            document.getElementById('val-flow').textContent = Math.round(data.flow);
+        }
+        
+        // Auto-run inference by triggering form submit
+        const form = document.getElementById('predictor-form');
+        if (form) {
+            const event = new Event('submit', { cancelable: true });
+            form.dispatchEvent(event);
+        }
+        
+    } catch (err) {
+        alert("Image Detection Error: " + err.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
     }
 }

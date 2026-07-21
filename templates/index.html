@@ -188,20 +188,78 @@
                                 <option value="dl">Deep Learning (PyTorch MLP Network)</option>
                             </select>
                         </div>
+                        <div class="form-group col-span-2">
+                            <label><i class="fa-solid fa-gears"></i> Input Mode</label>
+                            <div class="input-tabs">
+                                <button type="button" class="tab-btn active" id="tab-btn-manual"><i class="fa-solid fa-sliders"></i> Manual Sliders</button>
+                                <button type="button" class="tab-btn" id="tab-btn-image"><i class="fa-solid fa-camera"></i> Image Detection</button>
+                            </div>
+                        </div>
 
-                        <!-- Numeric inputs -->
-                        <div class="form-group">
-                            <label>Vehicle Density (veh/km) <span id="val-density" class="slider-val">80</span></label>
-                            <input type="range" id="input-density" min="0" max="250" value="80" class="custom-slider">
+                        <!-- Manual Input Group (Sliders) -->
+                        <div id="manual-sliders-group">
+                            <div class="form-group">
+                                <label>Vehicle Density (veh/km) <span id="val-density" class="slider-val">80</span></label>
+                                <input type="range" id="input-density" min="0" max="250" value="80" class="custom-slider">
+                            </div>
+                            <div class="form-group">
+                                <label>Average Speed (km/h) <span id="val-speed" class="slider-val">45</span></label>
+                                <input type="range" id="input-speed" min="5" max="120" value="45" class="custom-slider">
+                            </div>
+                            <div class="form-group">
+                                <label>Traffic Flow Rate (veh/h) <span id="val-flow" class="slider-val">300</span></label>
+                                <input type="range" id="input-flow" min="0" max="2500" value="300" class="custom-slider">
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label>Average Speed (km/h) <span id="val-speed" class="slider-val">45</span></label>
-                            <input type="range" id="input-speed" min="5" max="120" value="45" class="custom-slider">
+
+                        <!-- Image Input Group (CV Detection) -->
+                        <div id="image-input-group" class="hidden-group">
+                            <p class="input-desc">Select a preset traffic camera frame or upload a custom image to detect vehicle density, speed, and flow.</p>
+                            
+                            <div class="preset-section">
+                                <label class="sub-label"><i class="fa-solid fa-video"></i> Traffic Camera Presets</label>
+                                <div class="preset-carousel" id="preset-carousel">
+                                    <div class="loading-presets">Loading presets...</div>
+                                </div>
+                            </div>
+                            
+                            <div class="upload-section">
+                                <label class="sub-label"><i class="fa-solid fa-upload"></i> Upload Custom Road Image</label>
+                                <div class="upload-controls">
+                                    <input type="file" id="image-file-input" accept="image/*" class="hidden-file-input">
+                                    <button type="button" class="btn-secondary" id="btn-select-file"><i class="fa-solid fa-file-image"></i> Select Image</button>
+                                    <span id="selected-file-name" class="file-name">No file selected</span>
+                                </div>
+                            </div>
+
+                            <button type="button" class="btn-accent" id="btn-run-detection"><i class="fa-solid fa-wand-magic-sparkles"></i> Analyze Image Pattern</button>
+                            
+                            <div id="detection-preview-container" class="detection-preview hidden">
+                                <div class="preview-box">
+                                    <span class="preview-title">Annotated Detection Result</span>
+                                    <img id="detection-preview-img" src="" alt="Detection result">
+                                </div>
+                                <div class="detection-stats">
+                                    <div class="stat-badge">
+                                        <span class="lbl">Detected Vehicles</span>
+                                        <span class="val" id="det-vehicles">0</span>
+                                    </div>
+                                    <div class="stat-badge">
+                                        <span class="lbl">Est. Density</span>
+                                        <span class="val" id="det-density">0 <small>veh/km</small></span>
+                                    </div>
+                                    <div class="stat-badge">
+                                        <span class="lbl">Est. Speed</span>
+                                        <span class="val" id="det-speed">0 <small>km/h</small></span>
+                                    </div>
+                                    <div class="stat-badge">
+                                        <span class="lbl">Est. Flow Rate</span>
+                                        <span class="val" id="det-flow">0 <small>veh/h</small></span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label>Traffic Flow Rate (veh/h) <span id="val-flow" class="slider-val">300</span></label>
-                            <input type="range" id="input-flow" min="0" max="2500" value="300" class="custom-slider">
-                        </div>
+
                         <div class="form-group">
                             <label>Visibility Range (m) <span id="val-visibility" class="slider-val">300</span></label>
                             <input type="range" id="input-visibility" min="10" max="500" value="300" class="custom-slider">

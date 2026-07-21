@@ -3,6 +3,7 @@ import pickle
 import numpy as np
 import pandas as pd
 from flask import Flask, request, jsonify, render_template, send_from_directory
+from detection import detect_vehicles
 
 app = Flask(__name__)
 
@@ -36,6 +37,60 @@ def index():
 @app.route('/plots/<path:filename>')
 def serve_plot(filename):
     return send_from_directory('plots', filename)
+
+@app.route('/images/<path:filename>')
+def serve_preset_image(filename):
+    return send_from_directory('images', filename)
+
+@app.route('/api/presets')
+def get_presets():
+    try:
+        preset_dir = 'images'
+        if not os.path.exists(preset_dir):
+            return jsonify([])
+        files = sorted([f for f in os.listdir(preset_dir) if f.endswith('.jpg')])
+        return jsonify(files)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/detect-image', methods=['POST'])
+def detect_image():
+    try:
+        preset_filename = request.form.get('preset_filename')
+        
+        if preset_filename:
+            input_path = os.path.join('images', preset_filename)
+            if not os.path.exists(input_path):
+                return jsonify({'error': 'Preset image not found.'}), 404
+            
+            output_filename = f"annotated_{preset_filename}"
+            output_path = os.path.join('static', 'uploads', output_filename)
+        else:
+            if 'image' not in request.files:
+                return jsonify({'error': 'No image file uploaded.'}), 400
+                
+            file = request.files['image']
+            if file.filename == '':
+                return jsonify({'error': 'No selected file.'}), 400
+                
+            upload_dir = os.path.join('static', 'uploads')
+            os.makedirs(upload_dir, exist_ok=True)
+            
+            # Use a secure filename
+            clean_filename = "".join(c for c in file.filename if c.isalnum() or c in '._-')
+            input_path = os.path.join(upload_dir, f"uploaded_{clean_filename}")
+            file.save(input_path)
+            
+            output_filename = f"annotated_uploaded_{clean_filename}"
+            output_path = os.path.join(upload_dir, output_filename)
+            
+        results = detect_vehicles(input_path, output_path)
+        results['annotated_img_url'] = f"/static/uploads/{output_filename}"
+        
+        return jsonify(results)
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/simulation-data')
 def get_simulation_data():
@@ -157,4 +212,5 @@ if __name__ == '__main__':
 
     os.makedirs('templates', exist_ok=True)
     os.makedirs('static', exist_ok=True)
+    os.makedirs('static/uploads', exist_ok=True)
     app.run(debug=True, port=5000)
