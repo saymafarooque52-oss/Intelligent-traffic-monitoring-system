@@ -6,7 +6,7 @@ from flask import Flask, request, jsonify, render_template, send_from_directory
 
 app = Flask(__name__)
 
-# Model loaders
+
 def load_ml_pipeline():
     path = os.path.join('models', 'ml_model.pkl')
     if not os.path.exists(path):
@@ -39,13 +39,13 @@ def serve_plot(filename):
 
 @app.route('/api/simulation-data')
 def get_simulation_data():
-    # Return random traffic parameters that make sense physically
+   
     weather = np.random.choice(['Clear', 'Rainy', 'Foggy'], p=[0.7, 0.2, 0.1])
     day = np.random.choice(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'])
     hour = np.random.randint(0, 24)
     is_peak = 1 if hour in [8, 9, 17, 18] else 0
     
-    # Generate speed and density inversely correlated
+  
     if is_peak:
         density = np.random.randint(140, 200)
         speed = np.random.uniform(15.0, 35.0)
@@ -53,11 +53,11 @@ def get_simulation_data():
         density = np.random.randint(10, 110)
         speed = np.random.uniform(40.0, 95.0)
         
-    # Flow rate is roughly speed * density * constant
+
     flow = density * speed * 0.15 + np.random.uniform(-20, 20)
     flow = max(10.0, flow)
     
-    # Network metrics
+  
     signal = np.random.uniform(40, 98)
     latency = np.random.uniform(10, 180)
     packet_loss = np.random.uniform(0.0, 4.5)
@@ -83,7 +83,7 @@ def predict():
         data = request.get_json()
         model_type = data.get('model_type', 'ml')
         
-        # Extract features
+        
         density = float(data['density'])
         speed = float(data['speed'])
         flow = float(data['flow'])
@@ -97,11 +97,11 @@ def predict():
         day = data['day']
         peak_hour = int(data['peak_hour'])
         
-        # Derived sine/cosine features
+     
         sin_time = np.sin(2 * np.pi * hour / 24.0)
         cos_time = np.cos(2 * np.pi * hour / 24.0)
         
-        # Build pandas DataFrame for preprocessors
+        
         input_df = pd.DataFrame([{
             'Vehicle_Density': density,
             'Average_Speed': speed,
@@ -154,7 +154,7 @@ def predict():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    # Ensure template and static dirs exist
+
     os.makedirs('templates', exist_ok=True)
     os.makedirs('static', exist_ok=True)
     app.run(debug=True, port=5000)

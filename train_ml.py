@@ -47,7 +47,7 @@ def train_machine_learning():
     print(f"Training set size: {X_train.shape[0]} samples")
     print(f"Testing set size: {X_test.shape[0]} samples")
     
-    # Identify numeric and categorical features
+   
     numeric_features = [
         'Vehicle_Density', 'Average_Speed', 'Traffic_Flow_Rate', 
         'Temperature', 'Visibility', 'Signal_Strength', 
@@ -56,7 +56,7 @@ def train_machine_learning():
     ]
     categorical_features = ['Weather_Condition', 'Day_of_Week']
     
-    # Create preprocessing pipelines
+    
     preprocessor = ColumnTransformer(
         transformers=[
             ('num', StandardScaler(), numeric_features),
@@ -64,10 +64,10 @@ def train_machine_learning():
         ]
     )
     
-    # Create directory for models
+  
     os.makedirs('models', exist_ok=True)
     
-    # 1. Random Forest Classifier Pipeline
+  
     rf_pipeline = Pipeline(steps=[
         ('preprocessor', preprocessor),
         ('classifier', RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1))
@@ -81,7 +81,7 @@ def train_machine_learning():
     print("Classification Report:")
     print(classification_report(y_test, rf_preds, target_names=['Low', 'Medium', 'High']))
     
-    # 2. XGBoost Classifier Pipeline
+   
     xgb_pipeline = Pipeline(steps=[
         ('preprocessor', preprocessor),
         ('classifier', XGBClassifier(n_estimators=100, random_state=42, eval_metric='mlogloss', n_jobs=-1))
@@ -95,7 +95,7 @@ def train_machine_learning():
     print("Classification Report:")
     print(classification_report(y_test, xgb_preds, target_names=['Low', 'Medium', 'High']))
     
-    # Save the best model
+
     if rf_acc >= xgb_acc:
         best_pipeline = rf_pipeline
         best_name = "Random Forest"
@@ -107,13 +107,12 @@ def train_machine_learning():
         
     print(f"\nBest Model: {best_name} with accuracy {best_acc:.4f}")
     
-    # Save preprocessor and model separately or as pipeline
-    # We will save the fitted pipeline directly, as it makes inference much cleaner.
+   
     model_path = os.path.join('models', 'ml_model.pkl')
     with open(model_path, 'wb') as f:
         pickle.dump(best_pipeline, f)
         
-    # Save target mapping for later reference
+   
     with open(os.path.join('models', 'target_mapping.pkl'), 'wb') as f:
         pickle.dump({'mapping': target_mapping, 'reverse_mapping': {v: k for k, v in target_mapping.items()}}, f)
         

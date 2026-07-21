@@ -28,11 +28,11 @@ def load_dl_model():
     return model, preprocessor
 
 def run_prediction(args):
-    # Calculate Sin and Cos time representations
+
     sin_time = np.sin(2 * np.pi * args.hour / 24.0)
     cos_time = np.cos(2 * np.pi * args.hour / 24.0)
     
-    # Create input DataFrame
+ 
     input_data = pd.DataFrame([{
         'Vehicle_Density': args.density,
         'Average_Speed': args.speed,
@@ -74,7 +74,7 @@ def run_prediction(args):
         print("\nUsing Neural Network Deep Learning MLP model...")
         model, preprocessor = load_dl_model()
         
-        # Preprocess features
+       
         processed_data = preprocessor.transform(input_data)
         if hasattr(processed_data, 'toarray'):
             processed_data = processed_data.toarray()
@@ -95,10 +95,10 @@ def run_prediction(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Predict Traffic Condition using ML or DL")
     
-    # Model configuration
+
     parser.add_argument('--model', type=str, default='ml', choices=['ml', 'dl'], help="Model type: 'ml' or 'dl'")
     
-    # Input parameters
+   
     parser.add_argument('--density', type=int, default=80, help="Vehicle density (vehicles/km)")
     parser.add_argument('--speed', type=float, default=45.0, help="Average vehicle speed (km/h)")
     parser.add_argument('--flow', type=float, default=300.0, help="Traffic flow rate (vehicles/h)")
